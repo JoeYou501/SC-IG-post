@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>S&C Coach Real-AI 產生器 v3.3 (修復版)</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&family=Noto+Serif+TC:wght@700;900&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
+    <title>S&C Coach Real-AI 產生器 v3.4 (原生JSON版)</title>
+    <link rel="preconnect" href="[https://fonts.googleapis.com](https://fonts.googleapis.com)">
+    <link rel="preconnect" href="[https://fonts.gstatic.com](https://fonts.gstatic.com)" crossorigin>
+    <link href="[https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&family=Noto+Serif+TC:wght@700;900&display=swap](https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&family=Noto+Serif+TC:wght@700;900&display=swap)" rel="stylesheet">
+    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+    <script src="[https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js](https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js)"></script>
     
     <script>
         tailwind.config = {
@@ -43,7 +43,7 @@
     <div id="auth-overlay">
         <div class="text-center p-10 bg-white/10 backdrop-blur-2xl rounded-[3rem] border border-white/20 shadow-2xl w-[90%] max-w-[420px]">
             <div class="mb-6 text-secondary flex justify-center">
-                <svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                <svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
             </div>
             <h2 class="text-3xl font-black mb-2 font-serif text-white tracking-widest uppercase italic">Coach's Vault</h2>
             <p class="text-white/50 text-[10px] mb-10 tracking-[0.4em] uppercase">Private System Access</p>
@@ -68,7 +68,7 @@
         
         <div id="editor-body" class="p-8 space-y-8">
             <div class="bg-primary/[0.03] p-6 rounded-[2rem] border border-primary/10">
-                <label class="text-[10px] font-bold text-primary/40 uppercase tracking-[0.3em] mb-3 block">Gemini 1.5 Flash AI 深度解析</label>
+                <label class="text-[10px] font-bold text-primary/40 uppercase tracking-[0.3em] mb-3 block">Gemini 原生 JSON 深度解析</label>
                 <textarea id="ai-raw-input" rows="4" class="w-full p-4 border-2 border-dashed border-primary/20 rounded-2xl outline-none focus:border-secondary text-sm bg-white" placeholder="在此貼上任何長文，AI 將自動對標您的教練品牌風格..."></textarea>
                 <button id="ai-btn" onclick="callRealAI()" class="w-full mt-3 bg-primary text-white py-4 rounded-xl font-bold text-xs hover:bg-primary/90 transition-all shadow-lg flex items-center justify-center gap-2">
                     <span id="ai-btn-text">立即聯動 AI 萃取資訊</span>
@@ -145,11 +145,9 @@
     </div>
 
     <script>
-        // 電腦版強制解鎖邏輯
         function checkAuth() {
             const input = document.getElementById('auth-input');
             const val = input.value.trim();
-            
             if(val === ACCESS_PASSWORD) {
                 document.getElementById('auth-overlay').style.display = 'none';
                 sync();
@@ -160,38 +158,46 @@
             }
         }
 
-        // 強化的 AI 呼叫邏輯 (修正為 v1 API 並加入詳盡報錯)
+        // --- 強化的 API 呼叫 (使用 v1beta 原生 JSON 模式) ---
         async function callRealAI() {
             const raw = document.getElementById('ai-raw-input').value;
             if(!raw) return alert("請貼上文字內容");
             
             const btn = document.getElementById('ai-btn');
             const btnText = document.getElementById('ai-btn-text');
-            btn.disabled = true; btnText.innerText = "🚀 AI 正在深度萃取中...";
+            btn.disabled = true; btnText.innerText = "🚀 AI 正在深度解析中...";
 
             const prompt = `請以肌力與體能教練的角度，將以下文字萃取成一張資訊圖卡。
-            1. title: 一個極致專業且吸睛的標題(可插入<br>)
-            2. points: 剛好三個重點(格式: 重點標題|描述內容)
+            內容要求：
+            1. title: 極致專業的標題(若需換行請用 <br>)
+            2. points: 萃取出3個重點，必須以陣列呈現，每個格式為 "重點標題|40字內描述"。
             3. quote: 一句教練視角的深度金句。
-            輸入文字：${raw}
-            請僅以 JSON 格式輸出，屬性：title, points (Array), quote`;
+            
+            輸入內容：\n${raw}`;
 
             try {
-                // 修改處：API endpoint 已更新為 v1
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                    body: JSON.stringify({ 
+                        contents: [{ parts: [{ text: prompt }] }],
+                        // 這是關鍵：強制要求 AI 僅輸出 JSON
+                        generationConfig: {
+                            responseMimeType: "application/json"
+                        }
+                    })
                 });
+                
+                // 檢查 HTTP 狀態碼
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(`伺服器回應錯誤 (HTTP ${response.status})\n詳情: ${errData.error?.message || '未知錯誤'}`);
+                }
                 
                 const data = await response.json();
                 
-                // 新增處：精確捕捉 API 錯誤
-                if (data.error) {
-                    throw new Error(`API 錯誤代碼 ${data.error.code}：${data.error.message}`);
-                }
-
-                const rawJson = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
+                // 讀取原生 JSON 回應
+                const rawJson = data.candidates[0].content.parts[0].text;
                 const result = JSON.parse(rawJson);
 
                 document.getElementById('in-title').value = result.title || "";
@@ -204,7 +210,7 @@
                 alert("✨ AI 解析成功！");
             } catch (err) {
                 console.error(err);
-                alert(`解析失敗，原因：\n${err.message}\n\n請確認 API Key 是否設定正確。`);
+                alert(`❌ 解析失敗！\n\n錯誤原因：\n${err.message}\n\n請檢查 API Key 是否受限，或文字過長。`);
             } finally {
                 btn.disabled = false; btnText.innerText = "立即聯動 AI 萃取資訊";
             }
@@ -223,7 +229,7 @@
             for(let i=1; i<=3; i++) {
                 const val = document.getElementById('in-p' + i).value;
                 const row = document.getElementById(`row${i}`);
-                if(val.includes('|')) {
+                if(val && val.includes('|')) {
                     const [t, c] = val.split('|');
                     document.getElementById(`out-p${i}t`).innerText = t;
                     document.getElementById(`out-p${i}c`).innerText = c;

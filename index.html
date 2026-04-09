@@ -45,7 +45,7 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
             </div>
             <h2 class="text-2xl font-black mb-1 font-serif text-white tracking-widest uppercase italic">Coach's Vault</h2>
-            <p class="text-white/50 text-[10px] mb-6 tracking-[0.4em] uppercase">Premium Visual Edition v8.8</p>
+            <p class="text-white/50 text-[10px] mb-6 tracking-[0.4em] uppercase">Flexible Control v8.11</p>
             
             <div class="space-y-4 mb-6">
                 <div>
@@ -78,7 +78,13 @@
             </div>
 
             <div class="bg-primary/[0.03] p-6 rounded-[2rem] border border-primary/10">
-                <label class="text-[10px] font-bold text-primary/40 uppercase tracking-[0.3em] mb-3 block">貼上長文，AI 自動幫你切分成多頁 IG 貼文</label>
+                <div class="flex justify-between items-center mb-3">
+                    <label class="text-[10px] font-bold text-primary/40 uppercase tracking-[0.3em] block">貼上長文，AI 自動幫你切分成多頁 IG 貼文</label>
+                    <div class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-primary/10 shadow-sm">
+                        <label class="text-[10px] font-bold text-primary/70 tracking-widest">產出頁數</label>
+                        <input id="ai-target-pages" type="number" min="1" max="15" value="5" class="w-10 text-center font-black text-secondary outline-none bg-transparent">
+                    </div>
+                </div>
                 <textarea id="ai-raw-input" rows="3" class="w-full p-4 border-2 border-dashed border-primary/20 rounded-2xl outline-none focus:border-secondary text-sm bg-white" placeholder="貼上訓練科學文獻..."></textarea>
                 <button id="ai-btn" onclick="callRealAI()" class="w-full mt-3 bg-primary text-white py-4 rounded-xl font-bold text-xs hover:bg-primary/90 transition-all shadow-lg flex items-center justify-center gap-2">
                     <span id="ai-btn-text">🪄 啟動 AI 智能分頁萃取</span>
@@ -123,8 +129,8 @@
             </div>
 
             <div class="flex gap-4">
-                <button onclick="downloadImage()" class="flex-1 bg-gray-100 text-gray-500 py-5 rounded-3xl font-black text-xs uppercase tracking-[0.2em] hover:bg-gray-200 transition-all">儲存單頁</button>
-                <button onclick="nextPage()" class="flex-[2] bg-secondary text-white py-5 rounded-3xl font-black text-xl shadow-2xl shadow-secondary/30 active:scale-95 transition-all">下一頁並下載</button>
+                <button onclick="downloadImage()" class="flex-1 bg-gray-100 text-gray-500 py-5 rounded-3xl font-black text-xs uppercase tracking-[0.2em] hover:bg-gray-200 transition-all">儲存本頁</button>
+                <button onclick="nextPage()" class="flex-[2] bg-secondary text-white py-5 rounded-3xl font-black text-xl shadow-2xl shadow-secondary/30 active:scale-95 transition-all">下一頁</button>
             </div>
         </div>
     </div>
@@ -193,7 +199,10 @@
                 <span class="font-sans text-primary/30 text-[12px] font-black tracking-widest uppercase"></span>
                 <span id="page-indicator" class="bg-primary/5 text-primary text-[10px] font-black px-2 py-1 rounded tracking-widest">1 / 1</span>
             </div>
-            <div class="font-serif text-secondary text-[22px] font-bold tracking-widest" id="out-ig">JoeYou501</div>
+            <div class="flex items-center gap-2">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c59d5f" stroke-width="2.5" class="mb-[2px]"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"></line></svg>
+                <div class="font-serif text-secondary text-[22px] font-bold tracking-widest" id="out-ig">JoeYou501</div>
+            </div>
         </footer>
     </div>
 
@@ -250,7 +259,10 @@
                         option.value = pureName;
                         option.innerText = `${model.displayName} (${pureName})`;
                         
-                        if (pureName.includes('flash') && !pureName.includes('8b') && !pureName.includes('2.0')) {
+                        // ✨ 優先預設選取帶有 lite 的模型，或者最穩的 flash
+                        if (pureName.includes('lite')) {
+                            option.selected = true;
+                        } else if (pureName.includes('flash') && !selectEl.options[selectEl.selectedIndex]?.value?.includes('lite')) {
                             option.selected = true;
                         }
                         
@@ -283,6 +295,8 @@
 
         async function callRealAI() {
             const raw = document.getElementById('ai-raw-input').value;
+            const targetPages = document.getElementById('ai-target-pages').value || 5; // 抓取自訂頁數
+            
             if (!raw) return alert("請貼上文字內容");
             
             const savedApiKey = localStorage.getItem('sc_api_key');
@@ -295,11 +309,13 @@
             btn.disabled = true; 
             btnText.innerText = `🚀 正在呼叫 ${selectedModel}...`;
 
-            const prompt = `請以專業肌力與體能教練的角度，將以下長篇文字拆解成一組「IG 多頁滑動貼文」。
+            // ✨ 將變數 targetPages 放入指令中，讓 AI 照著你的期望頁數切分
+            const prompt = `請以「專業肌力與體能教練 (S&C Coach)，同時具備高爾夫專項體能背景」的角度，將以下長篇文字拆解成一組正好 ${targetPages} 頁的「IG 多頁滑動貼文」。
             請以 JSON 格式回應，不要包含 Markdown 標記。
             【嚴格規定】：
-            1. 每一頁都必須精準萃取出 3 個重點。
-            2. 每個重點的標題與內容之間，絕對要用直線符號 "|" 隔開，禁止使用冒號。
+            1. 總共必須產出 ${targetPages} 頁 (slides)。
+            2. 每一頁都必須精準萃取出 3 個重點。
+            3. 每個重點的標題與內容之間，絕對要用直線符號 "|" 隔開，禁止使用冒號。
             結構必須精準相符：
             {"slides": [{"title": "標題", "points": ["標題一|內文描述", "標題二|內文描述", "標題三|內文描述"], "quote": "一句具有啟發性的訓練科學金句"}]}
             輸入長文：\n${raw}`;
@@ -366,7 +382,6 @@
             document.getElementById('out-ig').innerText = igAccount;
             localStorage.setItem('sc_last_ig', igAccount); 
 
-            // ✨ VOL 控制邏輯
             const showVol = document.getElementById('show-vol-toggle').checked;
             const volContainer = document.getElementById('out-no-container');
             if (showVol) {
@@ -436,17 +451,14 @@
             }
         }
 
+        // ✨ 移除自動下載，單純執行換頁
         async function nextPage() {
-            await downloadImage(); 
-            
             if (aiSlidesData.length > 0) {
                 if (currentAiIndex < aiSlidesData.length - 1) {
                     currentAiIndex++;
                     loadSlideToUI(currentAiIndex);
                 } else {
-                    alert("🎉 這組貼文已經全部下載完成囉！");
-                    document.getElementById('ai-mode-badge').classList.add('hidden');
-                    aiSlidesData = []; 
+                    alert("🎉 已經到最後一頁囉！");
                 }
             } else {
                 let curr = parseInt(document.getElementById('in-curr-page').value);
